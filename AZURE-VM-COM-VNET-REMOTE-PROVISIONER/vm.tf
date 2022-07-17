@@ -18,6 +18,7 @@ resource "azurerm_network_interface" "network_interface" {
   name                = "network_interface"
   location            = var.location
   resource_group_name = azurerm_resource_group.resource_group.name
+  
 
   ip_configuration {
     name                          = "public-ip-terraform"
@@ -44,6 +45,35 @@ resource "azurerm_linux_virtual_machine" "vm" {
   network_interface_ids = [
     azurerm_network_interface.network_interface.id,
   ]
+provisioner "local-exec" {
+    command = "echo ${self.public_ip_address} >> public_ip.txt"
+  }
+
+  provisioner "file" {
+    content     = "public_ip: ${self.public_ip_address}"
+    destination = "/tmp/public_ip.txt"
+  }
+
+  provisioner "file" {
+    source      = "./teste.txt"
+    destination = "/tmp/"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "terraform"
+    private_key = ("./azure-key")
+    host        = self.public_ip_address
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo ${var.location} >> /tmp/ami.txt",
+      "echo private_ip: ${data.terraform_remote_state.vnet.outputs.security_group_id} >> /tmp/subnet_id.txt",
+
+    ]
+  }
+
 
   admin_ssh_key {
     username   = "terraform"
